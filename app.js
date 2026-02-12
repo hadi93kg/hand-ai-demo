@@ -10,14 +10,16 @@ const ctx = canvas.getContext("2d");
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 
+let handLandmarker;
+
+// 1. استارت وبکم
 async function startCam(){
   const stream = await navigator.mediaDevices.getUserMedia({video:true});
   video.srcObject = stream;
+  await video.play();   // ← این خط حیاتیه
 }
-startCam();
 
-let handLandmarker;
-
+// 2. لود مدل AI
 async function loadAI(){
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
@@ -31,8 +33,8 @@ async function loadAI(){
     numHands:1
   });
 }
-loadAI();
 
+// 3. رسم کره
 function drawSphere(points){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
@@ -44,19 +46,26 @@ function drawSphere(points){
     const y = cy + (p.y-.5)*500;
 
     ctx.beginPath();
-    ctx.fillStyle="#60a5fa";
+    ctx.fillStyle = "#60a5fa";
     ctx.arc(x,y,8,0,Math.PI*2);
     ctx.fill();
   }
 }
 
+// 4. لوپ اصلی
 async function loop(){
-  if(handLandmarker){
-    const res = await handLandmarker.detectForVideo(video,performance.now());
-    if(res.landmarks.length){
-      drawSphere(res.landmarks[0]);
-    }
+  const res = await handLandmarker.detectForVideo(video, performance.now());
+  if(res.landmarks.length){
+    drawSphere(res.landmarks[0]);
   }
   requestAnimationFrame(loop);
 }
-loop();
+
+// ترتیب درست اجرا
+async function init(){
+  await startCam();
+  await loadAI();
+  loop();
+}
+
+init();
